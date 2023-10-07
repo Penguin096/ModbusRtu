@@ -557,14 +557,14 @@ int8_t Modbus::poll_IRQ(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t 
         u8current = 0;
     }
     u32time = millis();
-
+#ifdef __AVR__
     if (port == &Serial)
         au8Buffer[u8current] = UDR0; // принимаем байт в массив
 #ifdef UDR1
     else if (port == &Serial1)
         au8Buffer[u8current] = UDR1; // принимаем байт в массив
 #endif
-
+#endif
     // check slave id
     if (au8Buffer[ID] != u8id)
         return 0;
