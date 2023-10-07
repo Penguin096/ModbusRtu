@@ -21,7 +21,7 @@
 #include <inttypes.h>
 #include "Arduino.h"
 #ifndef __AVR__
-#include "../../../src/main.h"
+#include "../../../../src/main.h"
 #endif
 
 /**
