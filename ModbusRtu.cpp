@@ -1112,7 +1112,7 @@ void Modbus::get_FC1()
         else
         {
 
-            au16regs[i / 2] = word(highByte(au16regs[i / 2]), au8Buffer[i + u8byte]);
+            au16regs[i / 2] = au8Buffer[i + u8byte];
         }
     }
 }
