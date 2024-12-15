@@ -22,6 +22,17 @@
 
 #ifndef STM32G474xx
 #include "Arduino.h"
+#else
+#define millis() HAL_GetTick()
+#define lowByte(w) ((uint8_t)((w) & 0xff))
+#define highByte(w) ((uint8_t)((w) >> 8))
+#define LOW 0x0
+#define HIGH 0x1
+
+unsigned int makeWord(unsigned int w) { return w; }
+unsigned int makeWord(unsigned char h, unsigned char l) { return (h << 8) | l; }
+
+#define word(...) makeWord(__VA_ARGS__)
 #endif
 
 #ifdef STM32F1xx
@@ -140,7 +151,9 @@ const unsigned char fctsupported[] =
 class Modbus
 {
 private:
-    Stream *port;      //!< Pointer to Stream class object (Either HardwareSerial or SoftwareSerial)
+#ifdef Arduino_h
+    Stream *port; //!< Pointer to Stream class object (Either HardwareSerial or SoftwareSerial)
+#endif
     uint8_t u8id;      //!< 0=master, 1..247=slave number
     uint8_t u8txenpin; //!< flow control pin: 0=USB or RS-232 mode, >1=RS-485 mode
     uint8_t u8state;
@@ -173,14 +186,16 @@ private:
     void buildException(uint8_t u8exception); // build exception message
 
 public:
+#ifdef Arduino_h
     Modbus(uint8_t u8id, Stream &port, uint8_t u8txenpin = 0);
+#endif
     // Deprecated: Use constructor: "Modbus m(0,Serial,0)" instead.
     Modbus(uint8_t u8id = 0, uint8_t u8serno = 0, uint8_t u8txenpin = 0) __attribute__((deprecated));
 
     void start();
     void setTimeOut(uint16_t u16timeOut);                                                                                                        //!< write communication watch-dog timer
     uint16_t getTimeOut();                                                                                                                       //!< get communication watch-dog timer value
-    boolean getTimeOutState();                                                                                                                   //!< get communication watch-dog timer state
+    bool getTimeOutState();                                                                                                                      //!< get communication watch-dog timer state
     int8_t query(modbus_t telegram);                                                                                                             //!< only for master
     int8_t poll();                                                                                                                               //!< cyclic poll for master
     int8_t poll(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u8size, uint8_t DI_u8size, uint8_t AI_u8size, uint8_t AO_u8size);     //!< cyclic poll for slave
