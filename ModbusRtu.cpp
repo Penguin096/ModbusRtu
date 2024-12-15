@@ -1,5 +1,4 @@
 #include "ModbusRtu.h"
-#include <inttypes.h>
 
 /* _____PUBLIC FUNCTIONS_____________________________________________________ */
 
