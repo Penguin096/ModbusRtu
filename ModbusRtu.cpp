@@ -100,7 +100,10 @@ void Modbus::start()
         digitalWrite(u8txenpin, LOW);
 #endif
     }
-#ifdef Arduino_h
+#ifdef STM32G474xx
+    while (USART1->ISR & USART_ISR_RXNE)
+        uint8_t t = USART1->RDR;
+#else
     while (port->read() >= 0)
         ;
 #endif
@@ -358,13 +361,13 @@ int8_t Modbus::query(modbus_t telegram)
  * @return errors counter
  * @ingroup loop
  */
+#ifdef Arduino_h
 int8_t Modbus::poll()
 {
     // check if there is any incoming frame
     uint8_t u8current;
-#ifdef Arduino_h
+
     u8current = port->available();
-#endif
 
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
     {
@@ -431,6 +434,7 @@ int8_t Modbus::poll()
     u8state = COM_IDLE;
     return u8BufferSize;
 }
+#endif
 
 /**
  * @brief
@@ -445,6 +449,7 @@ int8_t Modbus::poll()
  * @return 0 if no query, 1..4 if communication error, >4 if correct query processed
  * @ingroup loop
  */
+#ifdef Arduino_h
 int8_t Modbus::poll(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u8size, uint8_t DI_u8size, uint8_t AI_u8size, uint8_t AO_u8size)
 {
 
@@ -452,10 +457,9 @@ int8_t Modbus::poll(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u
 
     uint8_t u8current;
 
-// check if there is any incoming frame
-#ifdef Arduino_h
+    // check if there is any incoming frame
+
     u8current = port->available();
-#endif
 
     if (u8current == 0)
         return 0;
@@ -551,6 +555,7 @@ int8_t Modbus::poll(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u
     sendTxBuffer();
     return 0;
 }
+#endif
 int8_t Modbus::poll_IRQ(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u8size, uint8_t DI_u8size, uint8_t AI_u8size, uint8_t AO_u8size)
 {
     // check if there is any incoming frame
@@ -672,6 +677,8 @@ int8_t Modbus::poll_IRQ(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t 
     }
 #ifdef Arduino_h
     Serial.write(au8Buffer[u8current]);
+#elif STM32G474xx
+    USART1->TDR = au8Buffer[u8current];
 #endif
     sendTxBuffer();
     return 0;
@@ -698,8 +705,10 @@ int8_t Modbus::poll_IRQ_HAL(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint
     }
     u32time = millis();
 
-#ifdef Arduino_h
+#ifdef STM32F1xx
     au8Buffer[u8current] = USART1->DR; // принимаем байт в массив
+#elif STM32G474xx
+    au8Buffer[u8current] = USART1->RDR; // принимаем байт в массив
 #endif
 
     // check slave id
@@ -807,17 +816,16 @@ int8_t Modbus::poll_IRQ_HAL(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint
  * @return buffer size if OK, ERR_BUFF_OVERFLOW if u8BufferSize >= MAX_BUFFER
  * @ingroup buffer
  */
+#ifdef Arduino_h
 int8_t Modbus::getRxBuffer()
 {
     bool bBuffOverflow = false;
 
-#ifdef Arduino_h
     if (u8txenpin > 1)
         digitalWrite(u8txenpin, LOW);
-#endif
 
     u8BufferSize = 0;
-#ifdef Arduino_h
+
     while (port->available())
     {
         au8Buffer[u8BufferSize] = port->read();
@@ -826,7 +834,7 @@ int8_t Modbus::getRxBuffer()
         if (u8BufferSize >= MAX_BUFFER)
             bBuffOverflow = true;
     }
-#endif
+
     u16InCnt++;
 
     if (bBuffOverflow)
@@ -836,6 +844,7 @@ int8_t Modbus::getRxBuffer()
     }
     return u8BufferSize;
 }
+#endif
 
 /**
  * @brief
@@ -849,6 +858,7 @@ int8_t Modbus::getRxBuffer()
  * @return nothing
  * @ingroup buffer
  */
+#ifdef Arduino_h
 void Modbus::sendTxBuffer()
 {
     // append CRC to message
@@ -860,38 +870,28 @@ void Modbus::sendTxBuffer()
 
     if (u8txenpin > 1)
     {
-// set RS485 transceiver to transmit mode
-#ifdef Arduino_h
+        // set RS485 transceiver to transmit mode
         digitalWrite(u8txenpin, HIGH);
-#endif
     }
 
-// transfer buffer to serial line
-#ifdef Arduino_h
+    // transfer buffer to serial line
     port->write(au8Buffer, u8BufferSize);
-#endif
 
     if (u8txenpin > 1)
     {
-// must wait transmission end before changing pin state
-// soft serial does not need it since it is blocking
-// ...but the implementation in SoftwareSerial does nothing
-// anyway, so no harm in calling it.
-#ifdef Arduino_h
+        // must wait transmission end before changing pin state
+        // soft serial does not need it since it is blocking
+        // ...but the implementation in SoftwareSerial does nothing
+        // anyway, so no harm in calling it.
         port->flush();
-#endif
         // return RS485 transceiver to receive mode
         volatile uint32_t u32overTimeCountDown = u32overTime;
         while (u32overTimeCountDown-- > 0)
             ;
-#ifdef Arduino_h
         digitalWrite(u8txenpin, LOW);
-#endif
     }
-#ifdef Arduino_h
     while (port->read() >= 0)
         ;
-#endif
 
     u8BufferSize = 0;
 
@@ -901,6 +901,7 @@ void Modbus::sendTxBuffer()
     // increase message counter
     u16OutCnt++;
 }
+#endif
 
 #ifndef __AVR__
 void Modbus::sendTxBuffer_HAL()
@@ -915,7 +916,7 @@ void Modbus::sendTxBuffer_HAL()
     if (u8txenpin >= 1)
     {
 // set RS485 transceiver to transmit mode
-#ifdef Arduino_h
+#ifdef STM32F1xx
         HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_SET);
 #endif
     }
@@ -923,15 +924,22 @@ void Modbus::sendTxBuffer_HAL()
     // transfer buffer to serial line
     for (uint8_t i = 0; i < u8BufferSize; i++)
     {
-#ifdef Arduino_h
+#ifdef STM32F1xx
         while ((USART1->SR & USART_SR_TXE) == 0)
             ;                      // ждем опустошения буфера
         USART1->DR = au8Buffer[i]; // отправляем байт
-// SendArr[i] = 0;    // сразу же чистим переменную
+#elif STM32G474xx
+        while ((USART1->ISR & USART_ISR_TXE) == 0)
+            ;                       // ждем опустошения буфера
+        USART1->RDR = au8Buffer[i]; // отправляем байт
 #endif
+        // SendArr[i] = 0;    // сразу же чистим переменную
     }
-#ifdef Arduino_h
+#ifdef STM32F1xx
     while ((USART1->SR & USART_SR_TXE) == 0)
+        ; // ждем опустошения буфера
+#elif STM32G474xx
+    while ((USART1->ISR & USART_ISR_TXE) == 0)
         ; // ждем опустошения буфера
 #endif
 
@@ -946,13 +954,16 @@ void Modbus::sendTxBuffer_HAL()
         volatile uint32_t u32overTimeCountDown = u32overTime;
         while (u32overTimeCountDown-- > 0)
             ;
-#ifdef Arduino_h
+#ifdef STM32F1xx
         HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
 #endif
     }
-#ifdef Arduino_h
+#ifdef STM32F1xx
     while ((USART1->SR & USART_SR_RXNE) == 1)
         uint8_t clear = USART1->DR;
+#elif STM32G474xx
+    while ((USART1->ISR & USART_ISR_RXNE) == 1)
+        uint8_t clear = USART1->RDR;
 #endif
 
     u8BufferSize = 0;
