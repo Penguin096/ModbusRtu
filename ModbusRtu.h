@@ -20,8 +20,10 @@
 
 #include <inttypes.h>
 #include "Arduino.h"
-#ifndef __AVR__
+#ifdef STM32F1xx
 #include "../../../../src/main.h"
+#elif STM32G474xx
+#include "../../../../src/Core/Inc/main.h"
 #endif
 
 /**
