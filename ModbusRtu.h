@@ -28,11 +28,7 @@
 #define highByte(w) ((uint8_t)((w) >> 8))
 #define LOW 0x0
 #define HIGH 0x1
-
-unsigned int makeWord(unsigned int w) { return w; }
-unsigned int makeWord(unsigned char h, unsigned char l) { return (h << 8) | l; }
-
-#define word(...) makeWord(__VA_ARGS__)
+#define word(h, l) ((uint16_t)((h << 8)|l))
 #endif
 
 #ifdef STM32F1xx
