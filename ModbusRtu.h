@@ -190,7 +190,7 @@ public:
     Modbus(uint8_t u8id, Stream &port, uint8_t u8txenpin = 0);
 #endif
     // Deprecated: Use constructor: "Modbus m(0,Serial,0)" instead.
-    Modbus(uint8_t u8id = 0, uint8_t u8serno = 0, uint8_t u8txenpin = 0) __attribute__(("Modbus m(0,Serial,0)"));
+    Modbus(uint8_t u8id = 0, uint8_t u8serno = 0, uint8_t u8txenpin = 0) __attribute__((deprecated));
 
     void start();
     void setTimeOut(uint16_t u16timeOut);                                                                                                        //!< write communication watch-dog timer
