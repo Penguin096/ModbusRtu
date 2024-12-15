@@ -19,7 +19,11 @@
  */
 
 #include <inttypes.h>
+
+#ifndef STM32G474xx
 #include "Arduino.h"
+#endif
+
 #ifdef STM32F1xx
 #include "../../../../src/main.h"
 #elif STM32G474xx
