@@ -681,10 +681,12 @@ int8_t Modbus::poll_IRQ(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t 
 int8_t Modbus::poll_IRQ_HAL(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u8size, uint8_t DI_u8size, uint8_t AI_u8size, uint8_t AO_u8size)
 {
 // check if there is any incoming frame
-#ifdef Arduino_h
+#ifdef STM32F1xx
     if ((USART1->SR & USART_SR_RXNE) == 0)
-        return 0;
+#elif STM32G474xx
+    if ((USART1->ISR & USART_ISR_RXNE) == 0)
 #endif
+        return 0;
 
     au16regs = AO;
 
