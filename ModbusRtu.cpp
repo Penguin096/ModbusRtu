@@ -931,7 +931,7 @@ void Modbus::sendTxBuffer_HAL()
 #elif STM32G474xx
         while ((USART1->ISR & USART_ISR_TXE) == 0)
             ;                       // ждем опустошения буфера
-        USART1->RDR = au8Buffer[i]; // отправляем байт
+        USART1->TDR = au8Buffer[i]; // отправляем байт
 #endif
         // SendArr[i] = 0;    // сразу же чистим переменную
     }
