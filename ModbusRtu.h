@@ -28,7 +28,7 @@
 #define highByte(w) ((uint8_t)((w) >> 8))
 #define LOW 0x0
 #define HIGH 0x1
-#define word(h, l) ((uint16_t)((h << 8)|l))
+#define word(h, l) ((uint16_t)((h << 8) | l))
 #endif
 
 #ifdef STM32F1xx
@@ -148,7 +148,10 @@ class Modbus
 {
 private:
 #ifdef Arduino_h
-    Stream *port; //!< Pointer to Stream class object (Either HardwareSerial or SoftwareSerial)
+    Stream *port = NULL; //!< Pointer to Stream class object (Either HardwareSerial or SoftwareSerial)
+#endif
+#ifdef STM32F1xx || STM32G474xx
+    UART_HandleTypeDef *ser_dev = NULL;
 #endif
     uint8_t u8id;      //!< 0=master, 1..247=slave number
     uint8_t u8txenpin; //!< flow control pin: 0=USB or RS-232 mode, >1=RS-485 mode
@@ -187,6 +190,9 @@ public:
 #endif
     // Deprecated: Use constructor: "Modbus m(0,Serial,0)" instead.
     Modbus(uint8_t u8id = 0, uint8_t u8serno = 0, uint8_t u8txenpin = 0) __attribute__((deprecated));
+#ifdef STM32F1xx || STM32G474xx
+    Modbus(uint8_t u8id, UART_HandleTypeDef *theSer, uint8_t u8txenpin = 0);
+#endif
 
     void start();
     void setTimeOut(uint16_t u16timeOut);                                                                                                        //!< write communication watch-dog timer

@@ -83,6 +83,15 @@ Modbus::Modbus(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
         break;
     }
 }
+Modbus::Modbus(uint8_t u8id, UART_HandleTypeDef *theSer, uint8_t u8txenpin)
+{
+    this->u8id = u8id;
+    this->u8txenpin = u8txenpin;
+    this->u16timeOut = 1000;
+    this->u32overTime = 500;
+
+    ser_dev = theSer;
+}
 
 /**
  * @brief
