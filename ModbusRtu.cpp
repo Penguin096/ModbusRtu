@@ -83,6 +83,7 @@ Modbus::Modbus(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
         break;
     }
 }
+#if defined(STM32F1xx) || defined(STM32G474xx)
 Modbus::Modbus(uint8_t u8id, UART_HandleTypeDef *theSer, uint8_t u8txenpin)
 {
     this->u8id = u8id;
@@ -92,6 +93,7 @@ Modbus::Modbus(uint8_t u8id, UART_HandleTypeDef *theSer, uint8_t u8txenpin)
 
     ser_dev = theSer;
 }
+#endif
 
 /**
  * @brief
