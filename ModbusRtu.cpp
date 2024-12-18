@@ -112,8 +112,8 @@ void Modbus::start()
 #endif
     }
 #ifdef STM32G474xx
-    while (theSer->Instance->ISR & USART_ISR_RXNE)
-        uint8_t t = theSer->Instance->RDR;
+    while (ser_dev->Instance->ISR & USART_ISR_RXNE)
+        uint8_t t = ser_dev->Instance->RDR;
 #else
     while (port->read() >= 0)
         ;
@@ -570,7 +570,7 @@ int8_t Modbus::poll(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u
 int8_t Modbus::poll_IRQ(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u8size, uint8_t DI_u8size, uint8_t AI_u8size, uint8_t AO_u8size)
 {
     // check if there is any incoming frame
-    // if ((theSer->Instance->SR & USART_SR_RXNE) == 0)
+    // if ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
     //     return 0;
 
     au16regs = AO;
@@ -695,9 +695,9 @@ int8_t Modbus::poll_IRQ_HAL(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint
 {
 // check if there is any incoming frame
 #ifdef STM32F1xx
-    if ((theSer->Instance->SR & USART_SR_RXNE) == 0)
+    if ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
 #elif STM32G474xx
-    if ((theSer->Instance->ISR & USART_ISR_RXNE) == 0)
+    if ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 0)
 #endif
         return 0;
 
@@ -712,9 +712,9 @@ int8_t Modbus::poll_IRQ_HAL(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint
     u32time = millis();
 
 #ifdef STM32F1xx
-    au8Buffer[u8current] = theSer->Instance->DR; // принимаем байт в массив
+    au8Buffer[u8current] = ser_dev->Instance->DR; // принимаем байт в массив
 #elif STM32G474xx
-    au8Buffer[u8current] = theSer->Instance->RDR; // принимаем байт в массив
+    au8Buffer[u8current] = ser_dev->Instance->RDR; // принимаем байт в массив
 #endif
 
     // check slave id
@@ -931,21 +931,21 @@ void Modbus::sendTxBuffer_HAL()
     for (uint8_t i = 0; i < u8BufferSize; i++)
     {
 #ifdef STM32F1xx
-        while ((theSer->Instance->SR & USART_SR_TXE) == 0)
+        while ((ser_dev->Instance->SR & USART_SR_TXE) == 0)
             ;                                // ждем опустошения буфера
-        theSer->Instance->DR = au8Buffer[i]; // отправляем байт
+        ser_dev->Instance->DR = au8Buffer[i]; // отправляем байт
 #elif STM32G474xx
-        while ((theSer->Instance->ISR & USART_ISR_TXE) == 0)
+        while ((ser_dev->Instance->ISR & USART_ISR_TXE) == 0)
             ;                                 // ждем опустошения буфера
-        theSer->Instance->TDR = au8Buffer[i]; // отправляем байт
+        ser_dev->Instance->TDR = au8Buffer[i]; // отправляем байт
 #endif
         // SendArr[i] = 0;    // сразу же чистим переменную
     }
 #ifdef STM32F1xx
-    while ((theSer->Instance->SR & USART_SR_TXE) == 0)
+    while ((ser_dev->Instance->SR & USART_SR_TXE) == 0)
         ; // ждем опустошения буфера
 #elif STM32G474xx
-    while ((theSer->Instance->ISR & USART_ISR_TXE) == 0)
+    while ((ser_dev->Instance->ISR & USART_ISR_TXE) == 0)
         ; // ждем опустошения буфера
 #endif
 
@@ -965,11 +965,11 @@ void Modbus::sendTxBuffer_HAL()
 #endif
     }
 #ifdef STM32F1xx
-    while ((theSer->Instance->SR & USART_SR_RXNE) == 1)
-        uint8_t clear = theSer->Instance->DR;
+    while ((ser_dev->Instance->SR & USART_SR_RXNE) == 1)
+        uint8_t clear = ser_dev->Instance->DR;
 #elif STM32G474xx
-    while ((theSer->Instance->ISR & USART_ISR_RXNE) == 1)
-        uint8_t clear = theSer->Instance->RDR;
+    while ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 1)
+        uint8_t clear = ser_dev->Instance->RDR;
 #endif
 
     u8BufferSize = 0;
