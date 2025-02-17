@@ -216,6 +216,6 @@ public:
     void setID(uint8_t u8id); //!< write new ID for the slave
     void setTxendPinOverTime(uint32_t u32overTime);
     void end(); //!< finish any communication and release serial communication port
-    virtual void restart();
+    virtual void restart() {}
 };
 #endif
