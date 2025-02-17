@@ -133,6 +133,7 @@ const unsigned char fctsupported[] =
         MB_FC_READ_INPUT_REGISTER,
         MB_FC_WRITE_COIL,
         MB_FC_WRITE_REGISTER,
+        MB_FC_DIAGNOSTIC,
         MB_FC_WRITE_MULTIPLE_COILS,
         MB_FC_WRITE_MULTIPLE_REGISTERS};
 

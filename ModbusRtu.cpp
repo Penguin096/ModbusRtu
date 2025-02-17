@@ -1088,6 +1088,8 @@ uint8_t Modbus::validateRequest()
         if (u8regs > u8regsize)
             return EXC_ADDR_RANGE;
         break;
+    case MB_FC_DIAGNOSTIC:
+        break;
     }
     return 0; // OK, no exception code thrown
 }
