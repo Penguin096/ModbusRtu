@@ -308,6 +308,11 @@ int8_t Modbus::query(modbus_t telegram)
         au8Buffer[NB_LO] = lowByte(au16regs[0]);
         u8BufferSize = 6;
         break;
+    case MB_FC_DIAGNOSTIC:
+        au8Buffer[NB_HI] = 0;
+        au8Buffer[NB_LO] = 0;
+        u8BufferSize = 6;
+        break;
     case MB_FC_WRITE_MULTIPLE_COILS: // TODO: implement "sending coils"
         u8regsno = telegram.u16CoilsNo / 16;
         u8bytesno = u8regsno * 2;
