@@ -95,6 +95,7 @@ enum MB_FC
     MB_FC_READ_INPUT_REGISTER = 4,      /*!< FCT=4 -> read analog inputs */
     MB_FC_WRITE_COIL = 5,               /*!< FCT=5 -> write single coil or output */
     MB_FC_WRITE_REGISTER = 6,           /*!< FCT=6 -> write single register */
+    MB_FC_DIAGNOSTIC = 8,               /*!< FCT=8 -> diagnostic */
     MB_FC_WRITE_MULTIPLE_COILS = 15,    /*!< FCT=15 -> write multiple coils or outputs */
     MB_FC_WRITE_MULTIPLE_REGISTERS = 16 /*!< FCT=16 -> write multiple registers */
 };
@@ -180,6 +181,7 @@ private:
     int8_t process_FC3(uint16_t *regs, uint8_t u8size);
     int8_t process_FC5(bool *regs, uint8_t u8size);
     int8_t process_FC6(uint16_t *regs, uint8_t u8size);
+    int8_t process_FC8();
     int8_t process_FC15(bool *regs, uint8_t u8size);
     int8_t process_FC16(uint16_t *regs, uint8_t u8size);
     void buildException(uint8_t u8exception); // build exception message
@@ -214,5 +216,6 @@ public:
     void setID(uint8_t u8id); //!< write new ID for the slave
     void setTxendPinOverTime(uint32_t u32overTime);
     void end(); //!< finish any communication and release serial communication port
+    virtual void restart();
 };
 #endif

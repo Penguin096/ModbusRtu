@@ -799,6 +799,9 @@ int8_t Modbus::poll_IRQ_HAL(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint
     case MB_FC_WRITE_REGISTER:
         process_FC6(AO, AO_u8size);
         break;
+    case MB_FC_DIAGNOSTIC:
+        process_FC8();
+        break;
     case MB_FC_WRITE_MULTIPLE_COILS:
         process_FC15(DO, DO_u8size);
         break;
@@ -932,11 +935,11 @@ void Modbus::sendTxBuffer_HAL()
     {
 #ifdef STM32F1xx
         while ((ser_dev->Instance->SR & USART_SR_TXE) == 0)
-            ;                                // ждем опустошения буфера
+            ;                                 // ждем опустошения буфера
         ser_dev->Instance->DR = au8Buffer[i]; // отправляем байт
 #elif STM32G474xx
         while ((ser_dev->Instance->ISR & USART_ISR_TXE) == 0)
-            ;                                 // ждем опустошения буфера
+            ;                                  // ждем опустошения буфера
         ser_dev->Instance->TDR = au8Buffer[i]; // отправляем байт
 #endif
         // SendArr[i] = 0;    // сразу же чистим переменную
@@ -1322,6 +1325,28 @@ int8_t Modbus::process_FC6(uint16_t *regs, uint8_t /*u8size*/)
     u8CopyBufferSize = u8BufferSize + 2;
 
     return u8CopyBufferSize;
+}
+
+/**
+ * @brief
+ * This method processes function 8
+ * This method diagnostic
+ *
+ * @return u8BufferSize Response to master length
+ * @ingroup register
+ */
+int8_t Modbus::process_FC8()
+{
+
+    uint8_t u8add = word(au8Buffer[ADD_HI], au8Buffer[ADD_LO]);
+    // uint16_t u16val = word(au8Buffer[NB_HI], au8Buffer[NB_LO]);
+
+    if (u8add == 1)
+    {
+        restart();
+    }
+
+    return 0;
 }
 
 /**
