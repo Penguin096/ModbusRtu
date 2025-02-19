@@ -357,7 +357,11 @@ int8_t Modbus::query(modbus_t telegram)
         break;
     }
 
+#ifdef Arduino_h
     sendTxBuffer();
+#else
+    sendTxBuffer_HAL();
+#endif
     u8state = COM_WAITING;
     u8lastError = 0;
     return 0;
@@ -377,9 +381,9 @@ int8_t Modbus::query(modbus_t telegram)
  * @return errors counter
  * @ingroup loop
  */
-#ifdef Arduino_h
 int8_t Modbus::poll()
 {
+#ifdef Arduino_h
     // check if there is any incoming frame
     uint8_t u8current;
 
@@ -423,7 +427,57 @@ int8_t Modbus::poll()
         u8state = COM_IDLE;
         return u8exception;
     }
+#else
+// check if there is any incoming frame
+#ifdef STM32F1xx
+    if ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
+#elif STM32G474xx
+    if ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 0)
+#endif
+        return 0;
 
+    static uint8_t u8current; // счетчик принятых байтов
+
+    if ((unsigned long)(millis() - u32time) > (unsigned long)T35) // между байтами не более T35, чтобы не допустить прием чужих
+    {
+        u8current = 0;
+    }
+    u32time = millis();
+
+#ifdef STM32F1xx
+    au8Buffer[u8current] = ser_dev->Instance->DR; // принимаем байт в массив
+#elif STM32G474xx
+    au8Buffer[u8current] = ser_dev->Instance->RDR; // принимаем байт в массив
+#endif
+
+    // check slave id
+    if (au8Buffer[ID] != u8id)
+        return 0;
+
+    u8current++;
+
+    if (u8current >= MAX_BUFFER)
+    {
+        u16errCnt++;
+        u8current = 0;
+        u8lastError = ERR_BUFF_OVERFLOW;
+        return ERR_BUFF_OVERFLOW;
+    }
+
+    if (u8current < 6)
+        return 0;
+
+    // validate message: id, CRC, FCT, exception
+    uint8_t u8exception = validateAnswer();
+    if (u8exception != 0)
+    {
+        u8state = COM_IDLE;
+        return u8exception;
+    }
+
+    u8BufferSize = u8current;
+    u8current = 0;
+#endif
     // process answer
     switch (au8Buffer[FUNC])
     {
@@ -450,7 +504,6 @@ int8_t Modbus::poll()
     u8state = COM_IDLE;
     return u8BufferSize;
 }
-#endif
 
 /**
  * @brief
