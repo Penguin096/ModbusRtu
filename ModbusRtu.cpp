@@ -419,14 +419,6 @@ int8_t Modbus::poll()
         u16errCnt++;
         return i8state;
     }
-
-    // validate message: id, CRC, FCT, exception
-    uint8_t u8exception = validateAnswer();
-    if (u8exception != 0)
-    {
-        u8state = COM_IDLE;
-        return u8exception;
-    }
 #else
 // check if there is any incoming frame
 #ifdef STM32F1xx
@@ -438,21 +430,29 @@ int8_t Modbus::poll()
 
     static uint8_t u8current; // счетчик принятых байтов
 
-    if ((unsigned long)(millis() - u32time) > (unsigned long)T35) // между байтами не более T35, чтобы не допустить прием чужих
+    if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
     {
-        u8current = 0;
+        u8state = COM_IDLE;
+        u8lastError = NO_REPLY;
+        u16errCnt++;
+        return 0;
     }
-    u32time = millis();
+
+    // check T35 after frame end or still no frame end
+    if (u8current != u8lastRec)
+    {
+        u8lastRec = u8current;
+        u32time = millis();
+        return 0;
+    }
+    if ((unsigned long)(millis() - u32time) < (unsigned long)T35)
+        return 0;
 
 #ifdef STM32F1xx
     au8Buffer[u8current] = ser_dev->Instance->DR; // принимаем байт в массив
 #elif STM32G474xx
     au8Buffer[u8current] = ser_dev->Instance->RDR; // принимаем байт в массив
 #endif
-
-    // check slave id
-    if (au8Buffer[ID] != u8id)
-        return 0;
 
     u8current++;
 
@@ -467,6 +467,9 @@ int8_t Modbus::poll()
     if (u8current < 6)
         return 0;
 
+    u8current = 0;
+#endif
+
     // validate message: id, CRC, FCT, exception
     uint8_t u8exception = validateAnswer();
     if (u8exception != 0)
@@ -475,9 +478,6 @@ int8_t Modbus::poll()
         return u8exception;
     }
 
-    u8BufferSize = u8current;
-    u8current = 0;
-#endif
     // process answer
     switch (au8Buffer[FUNC])
     {
@@ -502,7 +502,7 @@ int8_t Modbus::poll()
         break;
     }
     u8state = COM_IDLE;
-    return u8BufferSize;
+    return u8current;
 }
 
 /**
