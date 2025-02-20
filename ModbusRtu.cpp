@@ -421,42 +421,42 @@ int8_t Modbus::poll()
         return i8state;
     }
 #else
+    static uint8_t u8current; // счетчик принятых байтов
+
 // check if there is any incoming frame
 #ifdef STM32F1xx
-    if ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
+    if ((ser_dev->Instance->SR & USART_SR_RXNE) != 0)
 #elif STM32G474xx
-    if ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 0)
+    if ((ser_dev->Instance->ISR & USART_ISR_RXNE) != 0)
 #endif
-        return 0;
-
-    static uint8_t u8current; // счетчик принятых байтов
+        u8current++;
 
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
     {
-        u8current = 0;
         u8state = COM_IDLE;
         u8lastError = NO_REPLY;
         u16errCnt++;
         return 0;
     }
 
-    if ((unsigned long)(millis() - u32time) > (unsigned long)T35) // между байтами не более T35, чтобы не допустить прием чужих
+    if (u8current == 0)
+        return 0;
+
+    // check T35 after frame end or still no frame end
+    if (u8current != u8lastRec)
     {
-        u8current = 0;
+        u8lastRec = u8current;
+        u32time = millis();
+        return 0;
     }
-    u32time = millis();
+    if ((unsigned long)(millis() - u32time) < (unsigned long)T35)
+        return 0;
 
 #ifdef STM32F1xx
-    au8Buffer[u8current] = ser_dev->Instance->DR; // принимаем байт в массив
+    au8Buffer[u8current - 1] = ser_dev->Instance->DR; // принимаем байт в массив
 #elif STM32G474xx
-    au8Buffer[u8current] = ser_dev->Instance->RDR; // принимаем байт в массив
+    au8Buffer[u8current - 1] = ser_dev->Instance->RDR; // принимаем байт в массив
 #endif
-
-    // // check slave id
-    // if (au8Buffer[ID] != u8id)
-    //     return 0;
-
-    u8current++;
 
     if (u8current >= MAX_BUFFER)
     {
@@ -466,20 +466,19 @@ int8_t Modbus::poll()
         return ERR_BUFF_OVERFLOW;
     }
 
-    if (u8current < 7)
+    if (u8current < 6)
         return 0;
 
-    u8BufferSize = u8current;
     u8current = 0;
 #endif
 
-    // // validate message: id, CRC, FCT, exception
-    // uint8_t u8exception = validateAnswer();
-    // if (u8exception != 0)
-    // {
-    //     u8state = COM_IDLE;
-    //     return u8exception;
-    // }
+    // validate message: id, CRC, FCT, exception
+    uint8_t u8exception = validateAnswer();
+    if (u8exception != 0)
+    {
+        u8state = COM_IDLE;
+        return u8exception;
+    }
 
     // process answer
     switch (au8Buffer[FUNC])
@@ -505,7 +504,7 @@ int8_t Modbus::poll()
         break;
     }
     u8state = COM_IDLE;
-    return u8BufferSize;
+    return u8current;
 }
 
 /**
