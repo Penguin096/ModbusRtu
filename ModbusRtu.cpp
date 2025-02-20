@@ -1,5 +1,6 @@
 #include "ModbusRtu.h"
-
+#include "main.h"
+#include "string.h"
 /* _____PUBLIC FUNCTIONS_____________________________________________________ */
 
 /**
@@ -35,7 +36,7 @@ Modbus::Modbus(uint8_t u8id, Stream &port, uint8_t u8txenpin)
     this->u32overTime = 500;
 }
 #endif
-
+extern UART_HandleTypeDef huart1;
 /**
  * @brief
  * DEPRECATED constructor for a Master/Slave.
@@ -420,15 +421,15 @@ int8_t Modbus::poll()
         return i8state;
     }
 #else
+    static uint8_t u8current; // счетчик принятых байтов
+
 // check if there is any incoming frame
 #ifdef STM32F1xx
-    if ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
+    if ((ser_dev->Instance->SR & USART_SR_RXNE) != 0)
 #elif STM32G474xx
-    if ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 0)
+    if ((ser_dev->Instance->ISR & USART_ISR_RXNE) != 0)
 #endif
-        return 0;
-
-    static uint8_t u8current; // счетчик принятых байтов
+        u8current++;
 
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
     {
@@ -437,6 +438,9 @@ int8_t Modbus::poll()
         u16errCnt++;
         return 0;
     }
+
+    if (u8current == 0)
+        return 0;
 
     // check T35 after frame end or still no frame end
     if (u8current != u8lastRec)
@@ -449,12 +453,10 @@ int8_t Modbus::poll()
         return 0;
 
 #ifdef STM32F1xx
-    au8Buffer[u8current] = ser_dev->Instance->DR; // принимаем байт в массив
+    au8Buffer[u8current - 1] = ser_dev->Instance->DR; // принимаем байт в массив
 #elif STM32G474xx
-    au8Buffer[u8current] = ser_dev->Instance->RDR; // принимаем байт в массив
+    au8Buffer[u8current - 1] = ser_dev->Instance->RDR; // принимаем байт в массив
 #endif
-
-    u8current++;
 
     if (u8current >= MAX_BUFFER)
     {
