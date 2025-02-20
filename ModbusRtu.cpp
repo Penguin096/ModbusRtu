@@ -452,9 +452,9 @@ int8_t Modbus::poll()
     au8Buffer[u8current] = ser_dev->Instance->RDR; // принимаем байт в массив
 #endif
 
-    // check slave id
-    if (au8Buffer[ID] != u8id)
-        return 0;
+    // // check slave id
+    // if (au8Buffer[ID] != u8id)
+    //     return 0;
 
     u8current++;
 
@@ -466,19 +466,20 @@ int8_t Modbus::poll()
         return ERR_BUFF_OVERFLOW;
     }
 
-    if (u8current < 6)
+    if (u8current < 7)
         return 0;
 
+    u8BufferSize = u8current;
     u8current = 0;
 #endif
 
-    // validate message: id, CRC, FCT, exception
-    uint8_t u8exception = validateAnswer();
-    if (u8exception != 0)
-    {
-        u8state = COM_IDLE;
-        return u8exception;
-    }
+    // // validate message: id, CRC, FCT, exception
+    // uint8_t u8exception = validateAnswer();
+    // if (u8exception != 0)
+    // {
+    //     u8state = COM_IDLE;
+    //     return u8exception;
+    // }
 
     // process answer
     switch (au8Buffer[FUNC])
@@ -504,7 +505,7 @@ int8_t Modbus::poll()
         break;
     }
     u8state = COM_IDLE;
-    return u8current;
+    return u8BufferSize;
 }
 
 /**
