@@ -403,7 +403,12 @@ int8_t Modbus::poll()
     uint8_t u8current;
 #ifdef Arduino_h
     u8current = port->available();
-
+// check if there is any incoming frame
+#elif STM32F1xx
+    u8current = ser_dev->Instance->SR & USART_SR_RXNE;
+#elif STM32G474xx
+    u8current = ser_dev->Instance->ISR & USART_ISR_RXNE;
+#endif
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
     {
         u8state = COM_IDLE;
@@ -414,7 +419,7 @@ int8_t Modbus::poll()
 
     if (u8current == 0)
         return 0;
-
+#ifdef Arduino_h
     // check T35 after frame end or still no frame end
     if (u8current != u8lastRec)
     {
@@ -427,28 +432,9 @@ int8_t Modbus::poll()
 
     // transfer Serial buffer frame to auBuffer
     u8lastRec = 0;
-#else
-// check if there is any incoming frame
-#ifdef STM32F1xx
-    u8current = ser_dev->Instance->SR & USART_SR_RXNE;
-#elif STM32G474xx
-    u8current = ser_dev->Instance->ISR & USART_ISR_RXNE;
-#endif
-
-    if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
-    {
-        u8state = COM_IDLE;
-        u8lastError = NO_REPLY;
-        u16errCnt++;
-        return 0;
-    }
-
-    if (u8current == 0)
-        return 0;
-
+#elif defined(STM32F1xx) || defined(STM32G474xx)
     if ((u8current == 0) && ((unsigned long)(millis() - u32time) > (unsigned long)T35)) // между байтами не более T35, чтобы не допустить прием чужих
         return 0;
-
     u32time = millis();
 #endif
     int8_t i8state = getRxBuffer();
