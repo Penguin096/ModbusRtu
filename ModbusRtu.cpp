@@ -421,42 +421,46 @@ int8_t Modbus::poll()
         return i8state;
     }
 #else
-    static uint8_t u8current; // счетчик принятых байтов
-
 // check if there is any incoming frame
 #ifdef STM32F1xx
-    if ((ser_dev->Instance->SR & USART_SR_RXNE) != 0)
+    if ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
 #elif STM32G474xx
-    if ((ser_dev->Instance->ISR & USART_ISR_RXNE) != 0)
+    if ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 0)
 #endif
-        u8current++;
+        return 0;
+
+    static uint8_t u8current; // счетчик принятых байтов
 
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
     {
+        u8current = 0;
         u8state = COM_IDLE;
         u8lastError = NO_REPLY;
         u16errCnt++;
         return 0;
     }
 
-    if (u8current == 0)
-        return 0;
-
-    // check T35 after frame end or still no frame end
-    if (u8current != u8lastRec)
+    if ((unsigned long)(millis() - u32time) > (unsigned long)T35) // между байтами не более T35, чтобы не допустить прием чужих
     {
-        u8lastRec = u8current;
-        u32time = millis();
+        u8current = 0;
+        u8state = COM_IDLE;
+        u8lastError = NO_REPLY;
+        u16errCnt++;
         return 0;
     }
-    if ((unsigned long)(millis() - u32time) < (unsigned long)T35)
-        return 0;
+    u32time = millis();
 
 #ifdef STM32F1xx
     au8Buffer[u8current - 1] = ser_dev->Instance->DR; // принимаем байт в массив
 #elif STM32G474xx
     au8Buffer[u8current - 1] = ser_dev->Instance->RDR; // принимаем байт в массив
 #endif
+
+    // // check slave id
+    // if (au8Buffer[ID] != u8id)
+    //     return 0;
+
+    u8current++;
 
     if (u8current >= MAX_BUFFER)
     {
@@ -466,9 +470,13 @@ int8_t Modbus::poll()
         return ERR_BUFF_OVERFLOW;
     }
 
-    if (u8current < 6)
+    if (u8current < 7)
         return 0;
 
+    if (((au8Buffer[FUNC] == 15) || (au8Buffer[FUNC] == 16)) && (u8current < (au8Buffer[BYTE_CNT] + 9)))
+        return 0;
+
+    u8BufferSize = u8current;
     u8current = 0;
 #endif
 
@@ -504,7 +512,7 @@ int8_t Modbus::poll()
         break;
     }
     u8state = COM_IDLE;
-    return u8current;
+    return u8BufferSize;
 }
 
 /**
