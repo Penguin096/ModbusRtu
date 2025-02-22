@@ -911,7 +911,7 @@ int8_t Modbus::getRxBuffer()
         if (u8BufferSize >= MAX_BUFFER)
             bBuffOverflow = true;
 
-        DELAY_US(100);
+        HAL_Delay(1);
     }
 
     u16InCnt++;
