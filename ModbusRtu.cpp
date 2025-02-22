@@ -447,7 +447,11 @@ int8_t Modbus::poll()
     if (u8exception != 0)
     {
         u8state = COM_IDLE;
+#ifdef Arduino_h
         return u8exception;
+#else
+        return 0;
+#endif
     }
 
     // process answer
