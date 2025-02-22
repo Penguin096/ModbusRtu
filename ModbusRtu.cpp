@@ -2,6 +2,21 @@
 #include "main.h"
 #include "string.h"
 
+#if defined(STM32F1xx) || defined(STM32G474xx)
+
+#define SYSTICK_LOAD (SystemCoreClock / 1000000U)
+#define SYSTICK_DELAY_CALIB (SYSTICK_LOAD >> 1)
+
+#define DELAY_US(us)                                                \
+    do                                                              \
+    {                                                               \
+        uint32_t start = SysTick->VAL;                              \
+        uint32_t ticks = (us * SYSTICK_LOAD) - SYSTICK_DELAY_CALIB; \
+        while ((start - SysTick->VAL) < ticks)                      \
+            ;                                                       \
+    } while (0)
+#endif
+
 /* _____PUBLIC FUNCTIONS_____________________________________________________ */
 
 /**
@@ -418,10 +433,6 @@ int8_t Modbus::poll()
 
     // transfer Serial buffer frame to auBuffer
     u8lastRec = 0;
-#elif defined(STM32F1xx) || defined(STM32G474xx)
-    if ((u8current == 0) && ((unsigned long)(millis() - u32time) > (unsigned long)T35)) // между байтами не более T35, чтобы не допустить прием чужих
-        return 0;
-    u32time = millis();
 #endif
     int8_t i8state = getRxBuffer();
     if (i8state < 6) // 7 was incorrect for functions 1 and 2 the smallest frame could be 6 bytes long
@@ -877,6 +888,7 @@ int8_t Modbus::getRxBuffer()
 int8_t Modbus::getRxBuffer()
 {
     bool bBuffOverflow = false;
+    u32time = millis();
 
     u8BufferSize = 0;
 
