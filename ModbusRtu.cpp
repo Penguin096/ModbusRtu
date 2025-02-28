@@ -409,9 +409,17 @@ int8_t Modbus::poll()
     u8current = ser_dev->Instance->SR & USART_SR_RXNE;
 #elif STM32G474xx
     u8current = ser_dev->Instance->ISR & USART_ISR_RXNE;
+    static uint32_t u32fix = 0;
+    u32fix++;
 #endif
+
+#ifdef STM32G474xx
+    if (((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut) || (u32fix > 2000000))
+#else
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
+#endif
     {
+        u32fix = 0;
         u8state = COM_IDLE;
         u8lastError = NO_REPLY;
         u16errCnt++;
