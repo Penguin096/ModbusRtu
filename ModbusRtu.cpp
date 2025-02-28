@@ -419,7 +419,9 @@ int8_t Modbus::poll()
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
 #endif
     {
+#ifdef STM32G474xx
         u32fix = 0;
+#endif
         u8state = COM_IDLE;
         u8lastError = NO_REPLY;
         u16errCnt++;
