@@ -201,7 +201,7 @@ public:
     void setTimeOut(uint16_t u16timeOut);                                                                                                        //!< write communication watch-dog timer
     uint16_t getTimeOut();                                                                                                                       //!< get communication watch-dog timer value
     bool getTimeOutState();                                                                                                                      //!< get communication watch-dog timer state
-    int8_t query(modbus_t *telegram);                                                                                                             //!< only for master
+    int8_t query(modbus_t telegram, uint16_t *au16data);                                                                                                             //!< only for master
     int8_t poll();                                                                                                                               //!< cyclic poll for master
     int8_t poll(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u8size, uint8_t DI_u8size, uint8_t AI_u8size, uint8_t AO_u8size);     //!< cyclic poll for slave
     int8_t poll_IRQ(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u8size, uint8_t DI_u8size, uint8_t AI_u8size, uint8_t AO_u8size); //!< cyclic poll for slave

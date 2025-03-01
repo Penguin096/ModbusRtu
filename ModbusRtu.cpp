@@ -286,7 +286,7 @@ uint8_t Modbus::getLastError()
  * @ingroup loop
  * @todo finish function 15
  */
-int8_t Modbus::query(modbus_t *telegram)
+int8_t Modbus::query(modbus_t telegram, uint16_t *au16data)
 {
     uint8_t u8regsno, u8bytesno;
     if (u8id != 0)
@@ -294,25 +294,26 @@ int8_t Modbus::query(modbus_t *telegram)
     if (u8state != COM_IDLE)
         return -1;
 
-    if ((telegram->u8id == 0) || (telegram->u8id > 247))
+    if ((telegram.u8id == 0) || (telegram.u8id > 247))
         return -3;
 
-    au16regs = telegram->au16reg;
+    // au16regs = telegram.au16reg;
+    au16regs = au16data;
 
     // telegram header
-    au8Buffer[ID] = telegram->u8id;
-    au8Buffer[FUNC] = telegram->u8fct;
-    au8Buffer[ADD_HI] = highByte(telegram->u16RegAdd);
-    au8Buffer[ADD_LO] = lowByte(telegram->u16RegAdd);
+    au8Buffer[ID] = telegram.u8id;
+    au8Buffer[FUNC] = telegram.u8fct;
+    au8Buffer[ADD_HI] = highByte(telegram.u16RegAdd);
+    au8Buffer[ADD_LO] = lowByte(telegram.u16RegAdd);
 
-    switch (telegram->u8fct)
+    switch (telegram.u8fct)
     {
     case MB_FC_READ_COILS:
     case MB_FC_READ_DISCRETE_INPUT:
     case MB_FC_READ_REGISTERS:
     case MB_FC_READ_INPUT_REGISTER:
-        au8Buffer[NB_HI] = highByte(telegram->u16CoilsNo);
-        au8Buffer[NB_LO] = lowByte(telegram->u16CoilsNo);
+        au8Buffer[NB_HI] = highByte(telegram.u16CoilsNo);
+        au8Buffer[NB_LO] = lowByte(telegram.u16CoilsNo);
         u8BufferSize = 6;
         break;
     case MB_FC_WRITE_COIL:
@@ -331,16 +332,16 @@ int8_t Modbus::query(modbus_t *telegram)
         u8BufferSize = 6;
         break;
     case MB_FC_WRITE_MULTIPLE_COILS: // TODO: implement "sending coils"
-        u8regsno = telegram->u16CoilsNo / 16;
+        u8regsno = telegram.u16CoilsNo / 16;
         u8bytesno = u8regsno * 2;
-        if ((telegram->u16CoilsNo % 16) != 0)
+        if ((telegram.u16CoilsNo % 16) != 0)
         {
             u8bytesno++;
             u8regsno++;
         }
 
-        au8Buffer[NB_HI] = highByte(telegram->u16CoilsNo);
-        au8Buffer[NB_LO] = lowByte(telegram->u16CoilsNo);
+        au8Buffer[NB_HI] = highByte(telegram.u16CoilsNo);
+        au8Buffer[NB_LO] = lowByte(telegram.u16CoilsNo);
         au8Buffer[BYTE_CNT] = u8bytesno;
         u8BufferSize = 7;
 
@@ -359,12 +360,12 @@ int8_t Modbus::query(modbus_t *telegram)
         break;
 
     case MB_FC_WRITE_MULTIPLE_REGISTERS:
-        au8Buffer[NB_HI] = highByte(telegram->u16CoilsNo);
-        au8Buffer[NB_LO] = lowByte(telegram->u16CoilsNo);
-        au8Buffer[BYTE_CNT] = (uint8_t)(telegram->u16CoilsNo * 2);
+        au8Buffer[NB_HI] = highByte(telegram.u16CoilsNo);
+        au8Buffer[NB_LO] = lowByte(telegram.u16CoilsNo);
+        au8Buffer[BYTE_CNT] = (uint8_t)(telegram.u16CoilsNo * 2);
         u8BufferSize = 7;
 
-        for (uint16_t i = 0; i < telegram->u16CoilsNo; i++)
+        for (uint16_t i = 0; i < telegram.u16CoilsNo; i++)
         {
             au8Buffer[u8BufferSize] = highByte(au16regs[i]);
             u8BufferSize++;
@@ -414,7 +415,7 @@ int8_t Modbus::poll()
 #endif
 
 #ifdef STM32G474xx
-    if (((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut) || (u32fix > 3000000))
+    if (((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut) || (u32fix > 2000000))
 #else
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
 #endif
