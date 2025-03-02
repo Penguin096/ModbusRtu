@@ -903,7 +903,6 @@ int8_t Modbus::getRxBuffer()
 int8_t Modbus::getRxBuffer()
 {
     bool bBuffOverflow = false;
-    u32time = millis();
 
     u8BufferSize = 0;
 
@@ -919,10 +918,22 @@ int8_t Modbus::getRxBuffer()
 #elif STM32G474xx
         au8Buffer[u8BufferSize] = ser_dev->Instance->RDR; // принимаем байт в массив
 #endif
-        u8BufferSize++;
+        if (au8Buffer[ID] != u8id)
+            u8BufferSize++;
+        u32time = millis();
 
         if (u8BufferSize >= MAX_BUFFER)
             bBuffOverflow = true;
+#ifdef STM32F1xx
+        while ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
+        {
+#elif STM32G474xx
+        while ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 0)
+        {
+#endif
+            if ((unsigned long)(millis() - u32time) > (unsigned long)T35)
+                return u8BufferSize;
+        }
     }
 
     u16InCnt++;
