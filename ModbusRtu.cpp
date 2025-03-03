@@ -474,7 +474,7 @@ int8_t Modbus::poll()
 #endif
 
     // check slave id
-    if (au8Buffer[ID] == u8id)
+    if (au8Buffer[ID] == 0)
         return 0;
 
     u8current++;
@@ -490,7 +490,12 @@ int8_t Modbus::poll()
     if (u8current < 6)
         return 0;
 
-    if (u8current < (au8Buffer[2] + 5))
+    if (au8Buffer[FUNC] == 5 || au8Buffer[FUNC] == 6)
+    {
+        if (u8current < 8)
+            return 0;
+    }
+    else if (u8current < (au8Buffer[2] + 5))
         return 0;
 
     u8BufferSize = u8current;
