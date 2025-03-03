@@ -401,13 +401,22 @@ int8_t Modbus::query(modbus_t telegram, uint16_t *au16data)
  */
 int8_t Modbus::poll()
 {
-#ifdef Arduino_h
     // check if there is any incoming frame
     uint8_t u8current;
-
+#ifdef Arduino_h
     u8current = port->available();
+// check if there is any incoming frame
+#elif STM32F1xx
+    u8current = ser_dev->Instance->SR & USART_SR_RXNE;
+#elif STM32G474xx
+    u8current = ser_dev->Instance->ISR & USART_ISR_RXNE;
+#endif
 
+#ifdef STM32G474xx
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
+#else
+    if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
+#endif
     {
         u8state = COM_IDLE;
         u8lastError = NO_REPLY;
@@ -417,7 +426,7 @@ int8_t Modbus::poll()
 
     if (u8current == 0)
         return 0;
-
+#ifdef Arduino_h
     // check T35 after frame end or still no frame end
     if (u8current != u8lastRec)
     {
@@ -430,6 +439,7 @@ int8_t Modbus::poll()
 
     // transfer Serial buffer frame to auBuffer
     u8lastRec = 0;
+#endif
     int8_t i8state = getRxBuffer();
     if (i8state < 6) // 7 was incorrect for functions 1 and 2 the smallest frame could be 6 bytes long
     {
@@ -437,70 +447,7 @@ int8_t Modbus::poll()
         u16errCnt++;
         return i8state;
     }
-#else
-    static uint8_t u8current; // счетчик принятых байтов
 
-#ifdef STM32G474xx
-    if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
-#else
-    if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
-#endif
-    {
-        u8current = 0;
-        u8state = COM_IDLE;
-        u8lastError = NO_REPLY;
-        u16errCnt++;
-        return 0;
-    }
-
-// check if there is any incoming frame
-#ifdef STM32F1xx
-    if ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
-#elif STM32G474xx
-    if ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 0)
-#endif
-        return 0;
-
-    if ((unsigned long)(millis() - u32time) > (unsigned long)T35) // между байтами не более T35, чтобы не допустить прием чужих
-    {
-        u8current = 0;
-    }
-    u32time = millis();
-
-#ifdef STM32F1xx
-    au8Buffer[u8current] = ser_dev->Instance->DR; // принимаем байт в массив
-#elif STM32G474xx
-    au8Buffer[u8current] = ser_dev->Instance->RDR; // принимаем байт в массив
-#endif
-
-    // check slave id
-    if (au8Buffer[ID] == 0)
-        return 0;
-
-    u8current++;
-
-    if (u8current >= MAX_BUFFER)
-    {
-        u16errCnt++;
-        u8current = 0;
-        u8lastError = ERR_BUFF_OVERFLOW;
-        return ERR_BUFF_OVERFLOW;
-    }
-
-    if (u8current < 6)
-        return 0;
-
-    if (au8Buffer[FUNC] == 5 || au8Buffer[FUNC] == 6)
-    {
-        if (u8current < 8)
-            return 0;
-    }
-    else if (u8current < (au8Buffer[2] + 5))
-        return 0;
-
-    u8BufferSize = u8current;
-    u8current = 0;
-#endif
     // validate message: id, CRC, FCT, exception
     uint8_t u8exception = validateAnswer();
     if (u8exception != 0)
@@ -931,6 +878,53 @@ int8_t Modbus::getRxBuffer()
 
         if (u8BufferSize >= MAX_BUFFER)
             bBuffOverflow = true;
+    }
+
+    u16InCnt++;
+
+    if (bBuffOverflow)
+    {
+        u16errCnt++;
+        return ERR_BUFF_OVERFLOW;
+    }
+    return u8BufferSize;
+}
+#else
+
+int8_t Modbus::getRxBuffer()
+{
+    bool bBuffOverflow = false;
+
+    u8BufferSize = 0;
+
+#ifdef STM32F1xx
+    while (ser_dev->Instance->SR & USART_SR_RXNE)
+    {
+#elif STM32G474xx
+    while (ser_dev->Instance->ISR & USART_ISR_RXNE)
+    {
+#endif
+#ifdef STM32F1xx
+        au8Buffer[u8BufferSize] = ser_dev->Instance->DR; // принимаем байт в массив
+#elif STM32G474xx
+        au8Buffer[u8BufferSize] = ser_dev->Instance->RDR; // принимаем байт в массив
+#endif
+        if (au8Buffer[ID] != u8id)
+            u8BufferSize++;
+        u32time = millis();
+
+        if (u8BufferSize >= MAX_BUFFER)
+            bBuffOverflow = true;
+#ifdef STM32F1xx
+        while ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
+        {
+#elif STM32G474xx
+        while ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 0)
+        {
+#endif
+            if ((unsigned long)(millis() - u32time) > (unsigned long)T35)
+                return u8BufferSize;
+        }
     }
 
     u16InCnt++;
