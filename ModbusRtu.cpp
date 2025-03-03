@@ -407,6 +407,14 @@ int8_t Modbus::poll()
 
     u8current = port->available();
 
+    if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
+    {
+        u8state = COM_IDLE;
+        u8lastError = NO_REPLY;
+        u16errCnt++;
+        return 0;
+    }
+
     if (u8current == 0)
         return 0;
 
@@ -422,7 +430,6 @@ int8_t Modbus::poll()
 
     // transfer Serial buffer frame to auBuffer
     u8lastRec = 0;
-
     int8_t i8state = getRxBuffer();
     if (i8state < 6) // 7 was incorrect for functions 1 and 2 the smallest frame could be 6 bytes long
     {
