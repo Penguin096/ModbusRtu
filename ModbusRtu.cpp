@@ -2,7 +2,7 @@
 #include "main.h"
 #include "string.h"
 
-#if defined(STM32F1xx) || defined(STM32G474xx)
+#if defined(STM32F1xx) || defined(STM32F1) || defined(STM32G474xx)
 
 #define SYSTICK_LOAD (SystemCoreClock / 1000000U)
 #define SYSTICK_DELAY_CALIB (SYSTICK_LOAD >> 1)
@@ -100,7 +100,7 @@ Modbus::Modbus(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
         break;
     }
 }
-#if defined(STM32F1xx) || defined(STM32G474xx)
+#if defined(STM32F1xx) || defined(STM32F1) || defined(STM32G474xx)
 Modbus::Modbus(uint8_t u8id, UART_HandleTypeDef *theSer, uint8_t u8txenpin)
 {
     this->u8id = u8id;
@@ -131,6 +131,9 @@ void Modbus::start()
 #ifdef STM32G474xx
     while (ser_dev->Instance->ISR & USART_ISR_RXNE)
         uint8_t t = ser_dev->Instance->RDR;
+#elif STM32F1
+    while (ser_dev->Instance->SR & USART_SR_RXNE)
+        uint8_t t = ser_dev->Instance->DR;
 #else
     while (port->read() >= 0)
         ;
@@ -406,17 +409,13 @@ int8_t Modbus::poll()
 #ifdef Arduino_h
     u8current = port->available();
 // check if there is any incoming frame
-#elif STM32F1xx
+#elif STM32F1
     u8current = ser_dev->Instance->SR & USART_SR_RXNE;
 #elif STM32G474xx
     u8current = ser_dev->Instance->ISR & USART_ISR_RXNE;
 #endif
 
-#ifdef STM32G474xx
     if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
-#else
-    if ((unsigned long)(millis() - u32timeOut) > (unsigned long)u16timeOut)
-#endif
     {
         u8state = COM_IDLE;
         u8lastError = NO_REPLY;
@@ -730,7 +729,7 @@ int8_t Modbus::poll_IRQ(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t 
 int8_t Modbus::poll_IRQ_HAL(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint8_t DO_u8size, uint8_t DI_u8size, uint8_t AI_u8size, uint8_t AO_u8size)
 {
 // check if there is any incoming frame
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
     if ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
 #elif STM32G474xx
     if ((ser_dev->Instance->ISR & USART_ISR_RXNE) == 0)
@@ -747,7 +746,7 @@ int8_t Modbus::poll_IRQ_HAL(bool *DO, bool *DI, uint16_t *AI, uint16_t *AO, uint
     }
     u32time = millis();
 
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
     au8Buffer[u8current] = ser_dev->Instance->DR; // принимаем байт в массив
 #elif STM32G474xx
     au8Buffer[u8current] = ser_dev->Instance->RDR; // принимаем байт в массив
@@ -897,14 +896,14 @@ int8_t Modbus::getRxBuffer()
 
     u8BufferSize = 0;
 
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
     while (ser_dev->Instance->SR & USART_SR_RXNE)
     {
 #elif STM32G474xx
     while (ser_dev->Instance->ISR & USART_ISR_RXNE)
     {
 #endif
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
         au8Buffer[u8BufferSize] = ser_dev->Instance->DR; // принимаем байт в массив
 #elif STM32G474xx
         au8Buffer[u8BufferSize] = ser_dev->Instance->RDR; // принимаем байт в массив
@@ -915,7 +914,7 @@ int8_t Modbus::getRxBuffer()
 
         if (u8BufferSize >= MAX_BUFFER)
             bBuffOverflow = true;
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
         while ((ser_dev->Instance->SR & USART_SR_RXNE) == 0)
         {
 #elif STM32G474xx
@@ -1008,7 +1007,7 @@ void Modbus::sendTxBuffer_HAL()
     if (u8txenpin >= 1)
     {
 // set RS485 transceiver to transmit mode
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
         HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_SET);
 #endif
     }
@@ -1016,7 +1015,7 @@ void Modbus::sendTxBuffer_HAL()
     // transfer buffer to serial line
     for (uint8_t i = 0; i < u8BufferSize; i++)
     {
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
         while ((ser_dev->Instance->SR & USART_SR_TXE) == 0)
             ;                                 // ждем опустошения буфера
         ser_dev->Instance->DR = au8Buffer[i]; // отправляем байт
@@ -1027,7 +1026,7 @@ void Modbus::sendTxBuffer_HAL()
 #endif
         // SendArr[i] = 0;    // сразу же чистим переменную
     }
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
     while ((ser_dev->Instance->SR & USART_SR_TXE) == 0)
         ; // ждем опустошения буфера
 #elif STM32G474xx
@@ -1046,11 +1045,11 @@ void Modbus::sendTxBuffer_HAL()
         volatile uint32_t u32overTimeCountDown = u32overTime;
         while (u32overTimeCountDown-- > 0)
             ;
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
         HAL_GPIO_WritePin(RS_DIR_GPIO_Port, RS_DIR_Pin, GPIO_PIN_RESET);
 #endif
     }
-#ifdef STM32F1xx
+#if defined(STM32F1xx) || defined(STM32F1)
     while ((ser_dev->Instance->SR & USART_SR_RXNE) == 1)
         uint8_t clear = ser_dev->Instance->DR;
 #elif STM32G474xx
