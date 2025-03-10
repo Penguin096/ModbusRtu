@@ -35,7 +35,7 @@
 #include "../../../../src/main.h"
 #elif STM32G474xx
 #include "../../../../src/Core/Inc/main.h"
-#elif STM32Fxx
+#elif STM32F1
 #include "../../../../src/Core/Inc/main.h"
 #endif
 
