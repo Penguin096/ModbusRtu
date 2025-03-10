@@ -35,6 +35,8 @@
 #include "../../../../src/main.h"
 #elif STM32G474xx
 #include "../../../../src/Core/Inc/main.h"
+#elif STM32Fxx
+#include "../../../../src/Core/Inc/main.h"
 #endif
 
 /**
@@ -152,7 +154,7 @@ private:
 #ifdef Arduino_h
     Stream *port = NULL; //!< Pointer to Stream class object (Either HardwareSerial or SoftwareSerial)
 #endif
-#if defined(STM32F1xx) || defined(STM32G474xx)
+#if defined(STM32F1) || defined(STM32F1xx) || defined(STM32G474xx)
     UART_HandleTypeDef *ser_dev = NULL;
 #endif
     uint8_t u8id;      //!< 0=master, 1..247=slave number
@@ -193,7 +195,7 @@ public:
 #endif
     // Deprecated: Use constructor: "Modbus m(0,Serial,0)" instead.
     Modbus(uint8_t u8id = 0, uint8_t u8serno = 0, uint8_t u8txenpin = 0) __attribute__((deprecated));
-#if defined(STM32F1xx) || defined(STM32G474xx)
+#if defined(STM32F1) || defined(STM32F1xx) || defined(STM32G474xx)
     Modbus(uint8_t u8id, UART_HandleTypeDef *theSer, uint8_t u8txenpin = 0);
 #endif
 
@@ -219,7 +221,7 @@ public:
     void end(); //!< finish any communication and release serial communication port
     virtual void restart()
     {
-#if defined(STM32F1xx) || defined(STM32G474xx)
+#if defined(STM32F1) || defined(STM32F1xx) || defined(STM32G474xx)
         NVIC_SystemReset();
 #endif
     }
