@@ -1,21 +1,8 @@
 #include "ModbusRtu.h"
+#ifndef ARDUINO
 #include "main.h"
-#include "string.h"
-
-#if defined(STM32F1xx) || defined(STM32F1) || defined(STM32G474xx)
-
-#define SYSTICK_LOAD (SystemCoreClock / 1000000U)
-#define SYSTICK_DELAY_CALIB (SYSTICK_LOAD >> 1)
-
-#define DELAY_US(us)                                                \
-    do                                                              \
-    {                                                               \
-        uint32_t start = SysTick->VAL;                              \
-        uint32_t ticks = (us * SYSTICK_LOAD) - SYSTICK_DELAY_CALIB; \
-        while ((start - SysTick->VAL) < ticks)                      \
-            ;                                                       \
-    } while (0)
 #endif
+#include "string.h"
 
 /* _____PUBLIC FUNCTIONS_____________________________________________________ */
 
