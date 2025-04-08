@@ -219,7 +219,7 @@ public:
     void setID(uint8_t u8id); //!< write new ID for the slave
     void setTxendPinOverTime(uint32_t u32overTime);
     void end(); //!< finish any communication and release serial communication port
-    virtual void restart()
+    inline volatile void restart()
     {
 #if defined(STM32F1) || defined(STM32F1xx) || defined(STM32G474xx)
         NVIC_SystemReset();
